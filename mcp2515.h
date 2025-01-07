@@ -265,6 +265,18 @@ class MCP2515
             EFLG_EWARN  = (1<<0)
         };
 
+        //MCP2515 Datasheet FIGURE 12-8 (READ STATUS INSTRUCTION)
+        enum /*class*/ STAT : uint8_t {
+            STAT_RX0IF      = (1<<0),
+            STAT_RX1IF      = (1<<1),
+            STAT_TXB0_TXREQ = (1<<2),
+            STAT_TX0IF      = (1<<3),
+            STAT_TXB1_TXREQ = (1<<4),
+            STAT_TX1IF      = (1<<5),
+            STAT_TXB2_TXREQ = (1<<6),
+            STAT_TX2IF      = (1<<7)
+        };
+
     private:
         static const uint8_t CANCTRL_REQOP = 0xE0;
         static const uint8_t CANCTRL_ABAT = 0x10;
@@ -308,12 +320,10 @@ class MCP2515
         static const uint8_t MCP_DLC  = 4;
         static const uint8_t MCP_DATA = 5;
 
-        enum /*class*/ STAT : uint8_t {
-            STAT_RX0IF = (1<<0),
-            STAT_RX1IF = (1<<1)
-        };
-
         static const uint8_t STAT_RXIF_MASK = STAT_RX0IF | STAT_RX1IF;
+        static const uint8_t STAT_TXIF_MASK = STAT_TX0IF | STAT_TX1IF | STAT_TX2IF;
+        static const uint8_t STAT_TXREQ_MASK = STAT_TXB0_TXREQ | STAT_TXB1_TXREQ | STAT_TXB2_TXREQ;
+
 
         enum /*class*/ TXBnCTRL : uint8_t {
             TXB_ABTF   = 0x40,
@@ -482,12 +492,15 @@ class MCP2515
         ERROR sendMessage(const struct can_frame *frame);
         ERROR readMessage(const RXBn rxbn, struct can_frame *frame);
         ERROR readMessage(struct can_frame *frame);
+        void cancelMessage(const TXBn txbn);
+        void cancelAllMessages();
         bool checkReceive(void);
         bool checkError(void);
         uint8_t getErrorFlags(void);
         void clearRXnOVRFlags(void);
         uint8_t getInterrupts(void);
         uint8_t getInterruptMask(void);
+        void setInterruptMask(const uint8_t);
         void clearInterrupts(void);
         void clearTXInterrupts(void);
         uint8_t getStatus(void);

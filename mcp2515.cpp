@@ -144,6 +144,16 @@ void MCP2515::modifyRegister(const REGISTER reg, const uint8_t mask, const uint8
 
 uint8_t MCP2515::getStatus(void)
 {
+    /* Bit:
+        0   RX0IF (CANINTF[0])
+        1   RX1IF (CANINTF[1])
+        2   TXREQ (TXB0CTRL[3])  
+        3   TX0IF (CANINTF[2])
+        4   TXREQ (TXB1CTRL[3])
+        5   TX1IF (CANINTF[3])
+        6   TXREQ (TXB2CTRL[3])
+        7   TX2IF (CANINTF[4])
+    */
     startSPI();
     SPIn->transfer(INSTRUCTION_READ_STATUS);
     uint8_t i = SPIn->transfer(0x00);
@@ -639,6 +649,25 @@ MCP2515::ERROR MCP2515::sendMessage(const struct can_frame *frame)
     return ERROR_ALLTXBUSY;
 }
 
+void MCP2515::cancelMessage(const TXBn txbn)
+{
+    //MCP2515 Datasheet 3.6 Aborting Transmission
+    modifyRegister( TXB[txbn].CTRL, TXB_TXREQ, 0);
+    while( readRegister( TXB[txbn].CTRL ) & TXB_TXREQ) {
+        _NOP();
+    } 
+}
+
+void MCP2515::cancelAllMessages() 
+{
+    //MCP2515 Datasheet 3.6 (Aborting Transmission)
+    modifyRegister(MCP_CANCTRL, CANCTRL_ABAT, CANCTRL_ABAT);
+    while( getStatus() & STAT_TXREQ_MASK) {
+        _NOP();
+    }
+    modifyRegister(MCP_CANCTRL, CANCTRL_ABAT, 0);
+}
+
 MCP2515::ERROR MCP2515::readMessage(const RXBn rxbn, struct can_frame *frame)
 {
     const struct RXBn_REGS *rxb = &RXB[rxbn];
@@ -736,6 +765,11 @@ void MCP2515::clearInterrupts(void)
 uint8_t MCP2515::getInterruptMask(void)
 {
     return readRegister(MCP_CANINTE);
+}
+
+void MCP2515::setInterruptMask(const uint8_t mask) 
+{
+    setRegister(MCP_CANINTE, mask);
 }
 
 void MCP2515::clearTXInterrupts(void)
